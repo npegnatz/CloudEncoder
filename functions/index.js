@@ -11,15 +11,18 @@ admin.initializeApp({
 
 const firestore = admin.firestore();
 
+//Detect Video Upload
 exports.startEncoding = functions.storage.bucket('clips-ecd84.appspot.com').object().onFinalize(async (object) => {
   const filePath = object.name;
   const contentType = object.contentType; 
   const filename = path.basename(filePath);
 
+  //Check that media is video
   if(!contentType.startsWith('video/') || filename.includes('.png') || filename.includes('.jpg')) { 
     return; 
   }
 
+  //Create Cloud Task
   const client = new CloudTasksClient();
   const project = 'clips-ecd84';
   const queue = 'encode-queue';
@@ -47,6 +50,7 @@ exports.startEncoding = functions.storage.bucket('clips-ecd84.appspot.com').obje
     seconds: inSeconds + Date.now() / 1000,
   };
 
+  //Queue Task
   const request = {parent, task};
   const [response] = await client.createTask(request);
   console.log('Queued Encode Task: ', filePath);
@@ -54,7 +58,7 @@ exports.startEncoding = functions.storage.bucket('clips-ecd84.appspot.com').obje
 });
 
 
-
+//Setup playback video location in database after encoding
 exports.setupPlayback = functions.https.onRequest((req, res) => {
   res.sendStatus(200);
   const videoId = req.body.id;
